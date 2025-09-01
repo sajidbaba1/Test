@@ -1,12 +1,58 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+
+// Helper function to calculate current streak
+const calculateCurrentStreak = (todos: { [key: string]: string[] }): [number, Date[]] => {
+  const dates = Object.keys(todos)
+    .filter((date) => todos[date].length > 0)
+    .map((date) => new Date(date))
+    .sort((a, b) => b.getTime() - a.getTime());
+
+  if (dates.length === 0) {
+    return [0, []];
+  }
+
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const mostRecentDate = dates[0];
+  if (
+    mostRecentDate.toDateString() !== today.toDateString() &&
+    mostRecentDate.toDateString() !== yesterday.toDateString()
+  ) {
+    return [0, []];
+  }
+
+  let currentStreak = 0;
+  const streakDays: Date[] = [];
+
+  for (let i = 0; i < dates.length; i++) {
+    const date = dates[i];
+    if (i === 0) {
+      currentStreak = 1;
+      streakDays.push(date);
+    } else {
+      const diff = dates[i - 1].getTime() - date.getTime();
+      if (diff === 24 * 60 * 60 * 1000) {
+        currentStreak++;
+        streakDays.push(date);
+      } else {
+        break;
+      }
+    }
+  }
+
+  return [currentStreak, streakDays];
+};
 
 // Helper function to generate calendar days
 const generateCalendarDays = (
   date: Date,
   selectedDate: Date,
-  onDateClick: (day: number) => void
+  onDateClick: (day: number) => void,
+  streakDays: Date[]
 ) => {
   const year = date.getFullYear();
   const month = date.getMonth();
@@ -25,13 +71,18 @@ const generateCalendarDays = (
     const dayDate = new Date(year, month, i);
     const isSelected = dayDate.toDateString() === selectedDate.toDateString();
     const isToday = dayDate.toDateString() === today.toDateString();
+    const isStreakDay = streakDays.some(
+      (streakDate) => streakDate.toDateString() === dayDate.toDateString()
+    );
 
     days.push(
       <div
         key={i}
         className={`border p-2 h-24 cursor-pointer hover:bg-gray-200 ${
           isSelected ? "bg-blue-200" : ""
-        } ${isToday ? "bg-yellow-200" : ""}`}
+        } ${isToday ? "bg-yellow-200" : ""} ${
+          isStreakDay ? "bg-green-300" : ""
+        }`}
         onClick={() => onDateClick(i)}
       >
         {i}
@@ -44,12 +95,20 @@ const generateCalendarDays = (
 
 export default function Home() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [todos, setTodos] = useState<{ [key: string]: string[] }>({});
+  const [todos, setTodos] = useState<{ [key: string]: string[] }>({
+    // Example data for testing
+    [new Date().toDateString()]: ["Task 1"],
+    [new Date(new Date().setDate(new Date().getDate() - 1)).toDateString()]: ["Task 2"],
+    [new Date(new Date().setDate(new Date().getDate() - 2)).toDateString()]: ["Task 3"],
+    [new Date(new Date().setDate(new Date().getDate() - 4)).toDateString()]: ["Task 4"],
+  });
   const [newTodo, setNewTodo] = useState("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingText, setEditingText] = useState("");
 
   const selectedDate = currentDate.toDateString();
+
+  const [streak, streakDays] = useMemo(() => calculateCurrentStreak(todos), [todos]);
 
   const handleAddTodo = () => {
     if (newTodo.trim()) {
@@ -123,6 +182,9 @@ export default function Home() {
               &gt;
             </button>
           </div>
+          <div className="text-center mb-4">
+            <h3 className="text-lg font-bold">Current Streak: {streak} days</h3>
+          </div>
           <div className="grid grid-cols-7 gap-2 text-center border-t pt-2">
             <div>Sun</div>
             <div>Mon</div>
@@ -131,7 +193,12 @@ export default function Home() {
             <div>Thu</div>
             <div>Fri</div>
             <div>Sat</div>
-            {generateCalendarDays(currentDate, currentDate, handleDateClick)}
+            {generateCalendarDays(
+              currentDate,
+              currentDate,
+              handleDateClick,
+              streakDays
+            )}
           </div>
         </div>
       </div>
