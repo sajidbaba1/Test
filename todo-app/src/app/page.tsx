@@ -2,9 +2,13 @@
 
 import { useState } from "react";
 
+
+        
+      
+
 // Helper function to generate calendar days
 const generateCalendarDays = (
-  date: Date,
+  date:
   selectedDate: Date,
   onDateClick: (day: number) => void
 ) => {
@@ -200,5 +204,6 @@ export default function Home() {
         </div>
       </div>
     </div>
+
   );
 }
